@@ -5,15 +5,17 @@ import { ChatArea } from './components/ChatArea';
 import { InputArea } from './components/InputArea';
 import { RightPanel } from './components/RightPanel';
 import { Dashboard } from './components/Dashboard';
+import { FloatingAssistant } from './components/FloatingAssistant';
 import { Message } from './types';
 import { generateBusinessInsightStream } from './services/geminiService';
 
 export default function App() {
   const [isRightPanelOpen, setIsRightPanelOpen] = useState(true);
   const [activePage, setActivePage] = useState('Chat Intelligence');
+  const [tier, setTier] = useState('advanced');
   
   const [moduleMessages, setModuleMessages] = useState<Record<string, Message[]>>({
-    'Chat Intelligence': [{ id: '1', role: 'assistant', content: 'Welcome to BharatBusinessGPT – India’s AI Business Intelligence & Strategy Operating System. How can I assist you today?' }],
+    'Chat Intelligence': [{ id: '1', role: 'assistant', content: 'Welcome to BharatMind – India’s AI Business Intelligence & Strategy Operating System. How can I assist you today?' }],
     'Competitive Analysis': [{ id: '1', role: 'assistant', content: 'Welcome to Competitive Analysis. Which competitors would you like to analyze?' }],
     'Financial Forecasting': [{ id: '1', role: 'assistant', content: 'Welcome to Financial Forecasting. Please provide your historical data or assumptions.' }],
     'Strategy Simulator': [{ id: '1', role: 'assistant', content: 'Welcome to Strategy Simulator. What scenario would you like to simulate?' }],
@@ -37,7 +39,7 @@ export default function App() {
     setIsGenerating(true);
 
     try {
-      await generateBusinessInsightStream(content, activePage, (chunkText) => {
+      await generateBusinessInsightStream(content, activePage, tier, (chunkText) => {
         setModuleMessages(prev => {
           const currentMessages = prev[activePage] || [];
           const updatedMessages = currentMessages.map(msg => {
@@ -76,11 +78,17 @@ export default function App() {
         ) : (
           <>
             <ChatArea messages={messages} isGenerating={isGenerating} />
-            <InputArea onSendMessage={handleSendMessage} isGenerating={isGenerating} />
+            <InputArea 
+              onSendMessage={handleSendMessage} 
+              isGenerating={isGenerating} 
+              tier={tier}
+              setTier={setTier}
+            />
           </>
         )}
       </div>
       {isRightPanelOpen && activePage !== 'Dashboard' && <RightPanel onClose={() => setIsRightPanelOpen(false)} />}
+      <FloatingAssistant />
     </div>
   );
 }

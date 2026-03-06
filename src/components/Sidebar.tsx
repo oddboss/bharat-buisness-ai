@@ -26,7 +26,7 @@ export function Sidebar({ activePage, setActivePage }: { activePage: string, set
         <div className="w-8 h-8 bg-emerald-600 rounded-lg flex items-center justify-center">
           <Bot className="w-5 h-5 text-white" />
         </div>
-        <span className="font-semibold text-sm tracking-wide text-gray-100">BharatBusinessGPT</span>
+        <span className="font-semibold text-sm tracking-wide text-gray-100">BharatMind</span>
       </div>
 
       <div className="flex-1 overflow-y-auto px-3 py-2 space-y-1">

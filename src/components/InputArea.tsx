@@ -2,7 +2,17 @@ import { Paperclip, Send, Mic } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 
-export function InputArea({ onSendMessage, isGenerating }: { onSendMessage: (msg: string) => void, isGenerating: boolean }) {
+export function InputArea({ 
+  onSendMessage, 
+  isGenerating,
+  tier,
+  setTier
+}: { 
+  onSendMessage: (msg: string) => void, 
+  isGenerating: boolean,
+  tier: string,
+  setTier: (tier: string) => void
+}) {
   const [input, setInput] = useState('');
   const [isUploading, setIsUploading] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -70,6 +80,22 @@ export function InputArea({ onSendMessage, isGenerating }: { onSendMessage: (msg
   return (
     <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-[#0f0f0f] via-[#0f0f0f] to-transparent pt-10 pb-6 px-4 md:px-8">
       <div className="max-w-3xl mx-auto relative">
+        <div className="flex gap-2 mb-3">
+          {["basic", "advanced", "deep_research"].map((m) => (
+            <button
+              key={m}
+              onClick={() => setTier(m)}
+              className={cn(
+                "px-3 py-1.5 rounded-full text-xs font-medium transition-colors capitalize",
+                tier === m 
+                  ? "bg-emerald-500 text-black" 
+                  : "bg-[#222] text-gray-300 hover:bg-[#333]"
+              )}
+            >
+              {m.replace('_', ' ')}
+            </button>
+          ))}
+        </div>
         <div className="relative flex items-end gap-2 bg-[#212121] border border-white/10 rounded-2xl p-2 shadow-xl focus-within:border-emerald-500/50 focus-within:ring-1 focus-within:ring-emerald-500/20 transition-all">
           
           <input 
@@ -124,7 +150,7 @@ export function InputArea({ onSendMessage, isGenerating }: { onSendMessage: (msg
           </div>
         </div>
         <div className="text-center mt-2">
-          <p className="text-xs text-gray-500">BharatBusinessGPT can make mistakes. Verify critical financial data.</p>
+          <p className="text-xs text-gray-500">BharatMind can make mistakes. Verify critical financial data.</p>
         </div>
       </div>
     </div>

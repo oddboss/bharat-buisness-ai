@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Activity, ArrowUpRight, ArrowDownRight, TrendingUp, AlertTriangle, Target } from 'lucide-react';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, BarChart, Bar } from 'recharts';
 import { io } from 'socket.io-client';
+import { TaskCalendar } from './TaskCalendar';
 
 const revenueData = [
   { name: 'Jan', revenue: 4000, competitor: 2400 },
@@ -179,6 +180,9 @@ export function Dashboard() {
             </div>
           </div>
         </div>
+
+        {/* Task Calendar */}
+        <TaskCalendar />
 
       </div>
     </div>
