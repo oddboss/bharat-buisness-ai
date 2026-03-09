@@ -1,20 +1,118 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+BharatMind – AI Business Intelligence Platform
 
-# Run and deploy your AI Studio app
+BharatMind is an AI-powered business intelligence platform designed to help small and medium businesses make smarter decisions using data, automation, and artificial intelligence.
 
-This contains everything you need to run your app locally.
+The platform analyzes business data such as financial records, sales reports, inventory data, and invoices to generate insights, predictions, and actionable recommendations.
 
-View your app in AI Studio: https://ai.studio/apps/d7f7e639-17ed-42dd-95da-31835bfee9bd
+BharatMind acts as a digital AI business advisor, helping entrepreneurs monitor their performance, detect risks, and discover opportunities for growth.
 
-## Run Locally
+Key Features
+AI Business Insights
 
-**Prerequisites:**  Node.js
+Automatically analyze uploaded business data to generate insights about revenue trends, profit margins, and operational performance.
 
+Business Health Score
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+Evaluate the overall health of a business using AI-driven metrics including revenue growth, cash flow, and operational stability.
+
+Financial Analytics
+
+Visual dashboards showing revenue trends, expenses, profit margins, and performance indicators.
+
+AI Recommendations
+
+Receive actionable suggestions such as inventory restocking, pricing adjustments, and marketing strategies.
+
+Business Simulation Lab
+
+Test business decisions before implementing them. Simulate scenarios such as opening a new store, increasing marketing spend, or adjusting pricing strategies.
+
+Competitor Intelligence
+
+Track market trends and competitor activities to stay ahead in the market.
+
+Voice Command AI
+
+Interact with BharatMind using voice commands to analyze business data and generate reports.
+
+Use Cases
+
+BharatMind is designed for:
+
+Small business owners
+
+MSMEs
+
+Entrepreneurs
+
+Startup founders
+
+Business analysts
+
+The platform helps users answer questions such as:
+
+What are my most profitable products?
+
+How healthy is my business financially?
+
+What actions should I take to increase profit?
+
+How will future decisions affect revenue?
+
+Technology Stack
+
+Frontend
+
+React
+
+TypeScript
+
+TailwindCSS
+
+Vite
+
+Backend
+
+Node.js
+
+Prisma ORM
+
+AI Integration
+
+Google Gemini API
+
+AI-driven business analysis
+
+Running the Project Locally
+Prerequisites
+
+Node.js installed
+
+Install Dependencies
+npm install
+Set Environment Variables
+
+Create .env.local and add your API key:
+
+GEMINI_API_KEY=your_api_key_here
+Run the Application
+npm run dev
+Future Roadmap
+
+Planned improvements include:
+
+Real-time business predictions
+
+AI automation workflows
+
+Advanced competitor analysis
+
+Voice-driven business command system
+
+Integration with accounting platforms (Tally, Shopify, POS)
+
+Vision
+
+Our vision is to build an AI-powered operating system for businesses that helps entrepreneurs make smarter, faster, and data-driven decisions.
+
+BharatMind aims to become the AI co-pilot for business growth.
