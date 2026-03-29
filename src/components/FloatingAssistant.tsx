@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
-  MessageSquare, Bot, FileText, Zap, Mic, X, Send, Paperclip, 
+  MessageSquare, Bot, FileText, Zap, X, Send, Paperclip, 
   ChevronRight, Activity, AlertTriangle, TrendingUp, Calendar, 
   Camera, Calculator, Database, Smartphone, Search, Bell, CheckCircle2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { generateBusinessInsightStream, generateVoiceResponse } from '../services/geminiService';
+import { generateBusinessInsightStream } from '../services/geminiService';
+import { ResearchMessage } from './ResearchMessage';
 
 interface Message {
   id: string;
@@ -13,12 +14,11 @@ interface Message {
   content: string;
 }
 
-export function FloatingAssistant() {
+export function FloatingAssistant({ setActivePage }: { setActivePage?: (page: string) => void }) {
   const [isOpen, setIsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'chat' | 'agents' | 'documents' | 'quick'>('chat');
-  const [voiceState, setVoiceState] = useState<'idle' | 'listening' | 'processing' | 'speaking'>('idle');
   const [messages, setMessages] = useState<Message[]>([
-    { id: '1', role: 'assistant', content: 'Namaste! I am BharatMind AI. How can I assist your business today?' }
+    { id: '1', role: 'assistant', content: 'Namaste! I am BharatMind AI. I have access to your Tally data and business context. How can I help your business today?' }
   ]);
   const [input, setInput] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
@@ -33,7 +33,32 @@ export function FloatingAssistant() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const pressTimer = useRef<NodeJS.Timeout>();
+  const pressTimer = useRef<NodeJS.Timeout | null>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
+
+  // Preload Voice Engine
+  useEffect(() => {
+    const initVoiceEngine = () => {
+      if ('speechSynthesis' in window) {
+        // Load voices
+        window.speechSynthesis.getVoices();
+      }
+      // Initialize AudioContext for potential future use or to unlock audio
+      if (!audioContextRef.current) {
+        const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
+        if (AudioContext) {
+          audioContextRef.current = new AudioContext();
+        }
+      }
+    };
+    
+    initVoiceEngine();
+    
+    // Some browsers require voices to be loaded asynchronously
+    if ('speechSynthesis' in window && window.speechSynthesis.onvoiceschanged !== undefined) {
+      window.speechSynthesis.onvoiceschanged = initVoiceEngine;
+    }
+  }, []);
 
   // Auto-scroll
   useEffect(() => {
@@ -81,102 +106,26 @@ export function FloatingAssistant() {
           msg.id === assistantMsgId ? { ...msg, content: msg.content + chunk } : msg
         ));
       });
-    } catch (error) {
+    } catch (error: any) {
+      let errorMessage = 'Error connecting to AI engine.';
+      
+      const isRateLimit = error?.message?.includes('429') || 
+                          error?.status === 429 || 
+                          JSON.stringify(error).includes('429') ||
+                          JSON.stringify(error).includes('RESOURCE_EXHAUSTED');
+
+      if (isRateLimit) {
+        errorMessage = 'BharatMind is currently busy. Retrying... If this persists, please wait a moment.';
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+
       setMessages(prev => prev.map(msg => 
-        msg.id === assistantMsgId ? { ...msg, content: 'Error connecting to AI engine.' } : msg
+        msg.id === assistantMsgId ? { ...msg, content: errorMessage } : msg
       ));
     } finally {
       setIsGenerating(false);
     }
-  };
-
-  const handleVoicePressStart = () => {
-    pressTimer.current = setTimeout(() => {
-      setVoiceState('listening');
-      startVoiceRecognition();
-    }, 500);
-  };
-
-  const handleVoicePressEnd = () => {
-    if (pressTimer.current) clearTimeout(pressTimer.current);
-  };
-
-  const startVoiceRecognition = () => {
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-      alert("Voice recognition not supported in this browser.");
-      setVoiceState('idle');
-      return;
-    }
-    const recognition = new SpeechRecognition();
-    recognition.lang = 'hi-IN';
-    recognition.continuous = false;
-    recognition.interimResults = true;
-
-    let finalTranscript = '';
-
-    recognition.onresult = (event: any) => {
-      finalTranscript = Array.from(event.results)
-        .map((result: any) => result[0].transcript)
-        .join('');
-      setInput(finalTranscript);
-    };
-
-    recognition.onend = () => {
-      if (finalTranscript.trim()) {
-        handleVoiceQuery(finalTranscript);
-      } else {
-        setVoiceState('idle');
-      }
-    };
-
-    recognition.start();
-  };
-
-  const handleVoiceQuery = async (text: string) => {
-    setVoiceState('processing');
-    setIsGenerating(true);
-    try {
-      const newUserMsg: Message = { id: Date.now().toString(), role: 'user', content: text };
-      setMessages(prev => [...prev, newUserMsg]);
-      setInput('');
-
-      const response = await generateVoiceResponse(text);
-
-      const assistantMsgId = (Date.now() + 1).toString();
-      setMessages(prev => [...prev, {
-        id: assistantMsgId,
-        role: 'assistant',
-        content: response.text + (response.action_suggestion ? `\n\nSuggestion: ${response.action_suggestion}` : '')
-      }]);
-
-      setVoiceState('speaking');
-      speakText(response.text, response.tts_code);
-    } catch (error) {
-      console.error("Voice processing error:", error);
-      setVoiceState('idle');
-    } finally {
-      setIsGenerating(false);
-    }
-  };
-
-  const speakText = (text: string, ttsCode: string) => {
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = ttsCode || 'en-IN';
-
-    utterance.onend = () => {
-      setVoiceState('idle');
-    };
-    utterance.onerror = () => {
-      setVoiceState('idle');
-    };
-
-    window.speechSynthesis.speak(utterance);
-  };
-
-  const stopSpeaking = () => {
-    window.speechSynthesis.cancel();
-    setVoiceState('idle');
   };
 
   const runWorkflow = async (name: string, prompt: string) => {
@@ -230,16 +179,20 @@ export function FloatingAssistant() {
                     "max-w-[85%] rounded-2xl px-4 py-2.5 text-sm",
                     msg.role === 'user' 
                       ? "bg-[#ff4500] text-white rounded-br-sm" 
-                      : "bg-[#1a1c23] text-gray-200 rounded-bl-sm border border-white/5"
+                      : "bg-[#1a1c23] text-gray-200 rounded-bl-sm border border-white/5 w-full"
                   )}>
-                    {msg.content || (isGenerating && msg.role === 'assistant' ? <span className="animate-pulse">...</span> : '')}
+                    {msg.role === 'user' ? (
+                      msg.content
+                    ) : (
+                      <ResearchMessage content={msg.content} />
+                    )}
                   </div>
                 </div>
               ))}
               <div ref={messagesEndRef} />
             </div>
             <div className="p-3 border-t border-white/10 bg-[#080910]/90">
-              <div className="flex items-end gap-2 bg-[#1a1c23] rounded-xl p-1.5 border border-white/10 focus-within:border-[#ff4500]/50 transition-colors">
+                <div className="flex items-end gap-2 glass-input p-1.5 focus-within:border-[#ff4500]/50 transition-colors">
                 <button 
                   onClick={() => fileInputRef.current?.click()}
                   className="p-2 text-gray-400 hover:text-[#ff4500] transition-colors rounded-lg"
@@ -255,9 +208,10 @@ export function FloatingAssistant() {
                       handleSend();
                     }
                   }}
-                  placeholder="Ask BharatMind..."
-                  className="w-full bg-transparent text-gray-200 text-sm resize-none outline-none py-2 max-h-32 assistant-scrollbar"
+                  placeholder="Ask BharatMind AI..."
+                  className="w-full bg-transparent text-sm resize-none outline-none py-2 max-h-32 assistant-scrollbar text-gray-200"
                   rows={1}
+                  disabled={isGenerating}
                 />
                 <button 
                   onClick={() => handleSend()}
@@ -438,8 +392,8 @@ export function FloatingAssistant() {
                 { icon: Calculator, label: "GST Calculate", prompt: "Help me calculate GST for a new transaction." },
                 { icon: Search, label: "Market Research", prompt: "Provide a quick market research overview for our industry." },
                 { icon: Calendar, label: "Festival Plan", prompt: "Create a marketing and sales plan for the upcoming festival." },
-                { icon: Database, label: "MSME Loan", prompt: "What are the requirements for an MSME loan?" },
-                { icon: FileSpreadsheet, label: "Make Excel", prompt: "generate excel report for this month's sales" },
+                { icon: Smartphone, label: "MSME Loan", prompt: "What are the requirements for an MSME loan?" },
+                { icon: FileText, label: "Make Excel", prompt: "generate excel report for this month's sales" },
                 { icon: Zap, label: "Deep Research", prompt: "Conduct a deep research analysis on emerging market trends." }
               ].map((action, i) => (
                 <button 
@@ -499,10 +453,10 @@ export function FloatingAssistant() {
                 BM
               </div>
               <div>
-                <h2 className="font-syne font-bold text-white text-sm">BharatMind</h2>
+                <h2 className="font-syne font-bold text-white text-sm">BharatMind AI</h2>
                 <div className="flex items-center gap-1.5">
                   <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                  <span className="text-[10px] text-gray-400 font-medium">AI Assistant Online</span>
+                  <span className="text-[10px] text-gray-400 font-medium">AI-Powered ERP</span>
                 </div>
               </div>
             </div>
@@ -550,45 +504,16 @@ export function FloatingAssistant() {
         
         {/* Bubble Button */}
         <button
-          onMouseDown={handleVoicePressStart}
-          onMouseUp={handleVoicePressEnd}
-          onMouseLeave={handleVoicePressEnd}
           onClick={() => {
-            if (voiceState === 'speaking') {
-              stopSpeaking();
-            } else if (voiceState === 'idle') {
-              setIsOpen(!isOpen);
-            }
+            setIsOpen(!isOpen);
           }}
-          className={cn(
-            "relative z-10 rounded-full bg-gradient-to-br from-[#ff4500] to-orange-600 flex items-center justify-center shadow-lg shadow-[#ff4500]/30 transition-all duration-300 border border-white/20",
-            voiceState !== 'idle' ? "w-[120px] h-[120px]" : "w-16 h-16 hover:scale-105"
-          )}
+          className="relative z-10 rounded-full bg-gradient-to-br from-[#ff4500] to-orange-600 flex items-center justify-center shadow-lg shadow-[#ff4500]/30 transition-all duration-300 border border-white/20 w-16 h-16 hover:scale-105"
         >
-          {voiceState !== 'idle' ? (
-            <div className="flex flex-col items-center justify-center gap-3">
-              <div className="flex items-center gap-1 h-10">
-                {voiceState === 'listening' || voiceState === 'speaking' ? (
-                  [1, 2, 3, 4, 5].map(i => (
-                    <div 
-                      key={i} 
-                      className="w-1.5 bg-white rounded-full waveform-bar" 
-                      style={{ animationDelay: `${i * 0.1}s` }}
-                    />
-                  ))
-                ) : (
-                  <div className="w-8 h-8 border-4 border-white border-t-transparent rounded-full animate-spin" />
-                )}
-              </div>
-              <span className="text-xs font-medium text-white font-syne capitalize">{voiceState}...</span>
-            </div>
-          ) : (
-            <span className="font-syne font-bold text-2xl text-white">BM</span>
-          )}
+          <span className="font-syne font-bold text-2xl text-white">BM</span>
         </button>
 
         {/* Notification Dot */}
-        {!isOpen && voiceState === 'idle' && (
+        {!isOpen && (
           <div className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full border-2 border-[#080910] flex items-center justify-center z-20">
             <span className="text-[10px] font-bold text-white">3</span>
           </div>

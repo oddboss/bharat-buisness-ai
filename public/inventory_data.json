@@ -1,0 +1,28 @@
+[
+  {
+    "id": "1",
+    "product_name": "Premium Basmati Rice",
+    "sku": "GRO-RIC-1001",
+    "category": "Groceries",
+    "stock_quantity": 450,
+    "cost_price": 85,
+    "selling_price": 120,
+    "supplier": "Reliance Retail",
+    "warehouse": "Mumbai-North",
+    "reorder_level": 50,
+    "last_updated": "2026-03-10T10:00:00Z"
+  },
+  {
+    "id": "2",
+    "product_name": "Smartphone X1",
+    "sku": "ELE-SMA-2002",
+    "category": "Electronics",
+    "stock_quantity": 15,
+    "cost_price": 12000,
+    "selling_price": 15999,
+    "supplier": "Amazon India",
+    "warehouse": "Delhi-South",
+    "reorder_level": 20,
+    "last_updated": "2026-03-12T14:30:00Z"
+  }
+]

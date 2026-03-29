@@ -1,0 +1,401 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: /organizations/{orgId}
+    // Fields:
+    //   - id: string (required) - Organization ID
+    //   - name: string (required, < 100 chars) - Organization name
+    //   - ownerId: string (required) - UID of the owner
+    //   - plan: string (required, enum: ["free", "pro", "enterprise"]) - Subscription plan
+    //   - createdAt: timestamp (required) - Creation time
+    //
+    // Collection: /organizations/{orgId}/users/{userId}
+    // Fields:
+    //   - uid: string (required) - User ID
+    //   - email: string (required, format: email) - User email
+    //   - displayName: string (required, < 100 chars) - User name
+    //   - role: string (required, enum: ["admin", "manager", "viewer"]) - User role
+    //   - organizationId: string (required) - Organization ID
+    //   - createdAt: timestamp (required) - Creation time
+    //
+    // Collection: /organizations/{orgId}/business_profiles/{profileId}
+    // Fields:
+    //   - id: string (required) - Profile ID
+    //   - organizationId: string (required) - Organization ID
+    //   - name: string (required, < 100 chars) - Business name
+    //   - industry: string (required, < 50 chars) - Industry
+    //   - location: string (optional, < 100 chars) - Location
+    //   - targetCustomers: string (optional, < 500 chars) - Target audience
+    //   - revenueModel: string (optional, < 500 chars) - Revenue model
+    //   - description: string (optional, < 2000 chars) - Business description
+    //   - isDefault: bool (optional) - Default profile flag
+    //   - createdAt: timestamp (required) - Creation time
+    //
+    // Collection: /organizations/{orgId}/projects/{projectId}
+    // Fields:
+    //   - id: string (required) - Project ID
+    //   - organizationId: string (required) - Organization ID
+    //   - title: string (required, < 200 chars) - Project title
+    //   - client: string (optional, < 100 chars) - Client name
+    //   - status: string (required, enum: ["Planning", "In Progress", "Review", "Completed"]) - Status
+    //   - deadline: string (optional, format: date) - Deadline
+    //   - progress: int (optional, 0-100) - Progress percentage
+    //   - createdAt: timestamp (required) - Creation time
+    //
+    // Collection: /organizations/{orgId}/documents/{docId}
+    // Fields:
+    //   - id: string (required) - Document ID
+    //   - organizationId: string (required) - Organization ID
+    //   - name: string (required, < 200 chars) - File name
+    //   - type: string (required, enum: ["pdf", "doc", "xls", "csv"]) - File type
+    //   - size: string (required, < 50 chars) - File size
+    //   - url: string (required, format: uri) - Storage URL
+    //   - status: string (required, enum: ["ready", "analyzing", "error"]) - AI status
+    //   - insights: list (optional, < 50 items) - AI insights
+    //   - uploadedAt: timestamp (required) - Upload time
+    //
+    // Collection: /organizations/{orgId}/financial_data/{dataId}
+    // Fields:
+    //   - id: string (required) - Data ID
+    //   - organizationId: string (required) - Organization ID
+    //   - month: string (required, < 20 chars) - Month name
+    //   - revenue: number (required) - Revenue amount
+    //   - profit: number (required) - Profit amount
+    //   - year: int (required) - Year
+    //
+    // Collection: /organizations/{orgId}/inventory/{itemId}
+    // Fields:
+    //   - id: string (required) - Item ID
+    //   - organizationId: string (required) - Organization ID
+    //   - name: string (required, < 100 chars) - Item name
+    //   - stock: string (required, < 100 chars) - Stock level
+    //   - status: string (required, enum: ["critical", "warning", "normal"]) - Status
+    //   - updatedAt: timestamp (required) - Update time
+    //
+    // Collection: /organizations/{orgId}/templates/{templateId}
+    // Fields:
+    //   - id: string (required) - Template ID
+    //   - organizationId: string (required) - Organization ID
+    //   - title: string (required, < 100 chars) - Title
+    //   - description: string (optional, < 500 chars) - Description
+    //   - category: string (required, enum: ["Proposal", "Email", "Financial", "Contract", "AI Prompt"]) - Category
+    //   - usageCount: int (required) - Usage count
+    //   - lastUsed: string (optional) - Last used time
+    //   - iconName: string (optional) - Icon name
+    //   - color: string (optional) - Color class
+    //
+    // Collection: /organizations/{orgId}/neural_dashboards/{dashId}
+    // Fields:
+    //   - id: string (required) - Dashboard ID
+    //   - organizationId: string (required) - Organization ID
+    //   - userId: string (optional) - User ID
+    //   - prompt: string (required) - Natural language prompt
+    //   - sql: string (required) - Generated SQL
+    //   - kpis: list (required) - KPI objects
+    //   - charts: list (required) - Chart configurations
+    //   - table: list (optional) - Data extract
+    //   - insights: list (required) - AI insights
+    //   - recommendations: list (required) - AI recommendations
+    //   - createdAt: timestamp (required) - Creation time
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isOrgMember(orgId) {
+      return isAuthenticated() && (
+        orgId == 'org_' + request.auth.uid ||
+        exists(/databases/$(database)/documents/organizations/$(orgId)/users/$(request.auth.uid)) ||
+        (exists(/databases/$(database)/documents/organizations/$(orgId)) && get(/databases/$(database)/documents/organizations/$(orgId)).data.ownerId == request.auth.uid) ||
+        (request.auth.token.email == "partha311@gmail.com" && request.auth.token.email_verified == true)
+      );
+    }
+
+    function isOrgAdmin(orgId) {
+      return isAuthenticated() && (
+        orgId == 'org_' + request.auth.uid ||
+        (exists(/databases/$(database)/documents/organizations/$(orgId)/users/$(request.auth.uid)) &&
+         get(/databases/$(database)/documents/organizations/$(orgId)/users/$(request.auth.uid)).data.role == 'admin') ||
+        (exists(/databases/$(database)/documents/organizations/$(orgId)) && get(/databases/$(database)/documents/organizations/$(orgId)).data.ownerId == request.auth.uid) ||
+        (request.auth.token.email == "partha311@gmail.com" && request.auth.token.email_verified == true)
+      );
+    }
+
+    function isOrgManager(orgId) {
+      return isAuthenticated() && (
+        orgId == 'org_' + request.auth.uid ||
+        (exists(/databases/$(database)/documents/organizations/$(orgId)/users/$(request.auth.uid)) &&
+         get(/databases/$(database)/documents/organizations/$(orgId)/users/$(request.auth.uid)).data.role in ['admin', 'manager']) ||
+        (exists(/databases/$(database)/documents/organizations/$(orgId)) && get(/databases/$(database)/documents/organizations/$(orgId)).data.ownerId == request.auth.uid) ||
+        (request.auth.token.email == "partha311@gmail.com" && request.auth.token.email_verified == true)
+      );
+    }
+
+    function isValidEmail(email) {
+      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    function isValidUrl(url) {
+      return url is string && (url.matches("^https://.*") || url.matches("^http://.*"));
+    }
+
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+
+    function hasRequiredFields(fields) {
+      return request.resource.data.keys().hasAll(fields);
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+
+    function isValidOrganization(data) {
+      return hasRequiredFields(['id', 'name', 'ownerId', 'plan', 'createdAt']) &&
+             hasOnlyAllowedFields(['id', 'name', 'ownerId', 'plan', 'createdAt']) &&
+             data.id is string && data.name is string && data.name.size() < 100 &&
+             data.ownerId is string && data.plan in ['free', 'pro', 'enterprise'] &&
+             data.createdAt is timestamp;
+    }
+
+    function isValidUser(data) {
+      return hasRequiredFields(['uid', 'email', 'displayName', 'role', 'organizationId', 'createdAt']) &&
+             hasOnlyAllowedFields(['uid', 'email', 'displayName', 'role', 'organizationId', 'createdAt']) &&
+             data.uid is string && data.email is string && isValidEmail(data.email) &&
+             data.displayName is string && data.displayName.size() < 100 &&
+             data.role in ['admin', 'manager', 'viewer'] &&
+             data.organizationId is string && data.createdAt is timestamp;
+    }
+
+    function isValidBusinessProfile(data) {
+      return hasRequiredFields(['id', 'organizationId', 'name', 'industry', 'createdAt']) &&
+             hasOnlyAllowedFields(['id', 'organizationId', 'name', 'industry', 'location', 'targetCustomers', 'revenueModel', 'description', 'isDefault', 'createdAt']) &&
+             data.id is string && data.organizationId is string &&
+             data.name is string && data.name.size() < 100 &&
+             data.industry is string && data.industry.size() < 50 &&
+             (!('location' in data) || (data.location is string && data.location.size() < 100)) &&
+             (!('targetCustomers' in data) || (data.targetCustomers is string && data.targetCustomers.size() < 500)) &&
+             (!('revenueModel' in data) || (data.revenueModel is string && data.revenueModel.size() < 500)) &&
+             (!('description' in data) || (data.description is string && data.description.size() < 2000)) &&
+             (!('isDefault' in data) || data.isDefault is bool) &&
+             data.createdAt is timestamp;
+    }
+
+    function isValidProject(data) {
+      return hasRequiredFields(['id', 'organizationId', 'title', 'status', 'createdAt']) &&
+             hasOnlyAllowedFields(['id', 'organizationId', 'title', 'client', 'status', 'deadline', 'progress', 'description', 'tasks', 'linkedChats', 'documents', 'createdAt']) &&
+             data.id is string && data.organizationId is string &&
+             data.title is string && data.title.size() < 200 &&
+             (!('client' in data) || (data.client is string && data.client.size() < 100)) &&
+             data.status in ['Planning', 'In Progress', 'Review', 'Completed'] &&
+             (!('deadline' in data) || data.deadline is string) &&
+             (!('progress' in data) || (data.progress is int && data.progress >= 0 && data.progress <= 100)) &&
+             (!('description' in data) || (data.description is string && data.description.size() < 2000)) &&
+             (!('tasks' in data) || (data.tasks is list && data.tasks.size() < 100)) &&
+             (!('linkedChats' in data) || data.linkedChats is int) &&
+             (!('documents' in data) || data.documents is int) &&
+             data.createdAt is timestamp;
+    }
+
+    function isValidDocument(data) {
+      return hasRequiredFields(['id', 'organizationId', 'name', 'type', 'url', 'status', 'uploadedAt']) &&
+             hasOnlyAllowedFields(['id', 'organizationId', 'name', 'type', 'size', 'url', 'status', 'insights', 'uploadedAt']) &&
+             data.id is string && data.organizationId is string &&
+             data.name is string && data.name.size() < 200 &&
+             data.type in ['pdf', 'doc', 'xls', 'csv'] &&
+             (!('size' in data) || (data.size is string && data.size.size() < 50)) &&
+             isValidUrl(data.url) &&
+             data.status in ['ready', 'analyzing', 'error'] &&
+             (!('insights' in data) || (data.insights is list && data.insights.size() < 50)) &&
+             data.uploadedAt is timestamp;
+    }
+
+    function isValidFinancialData(data) {
+      return hasRequiredFields(['id', 'organizationId', 'month', 'revenue', 'profit', 'year']) &&
+             hasOnlyAllowedFields(['id', 'organizationId', 'month', 'revenue', 'profit', 'year']) &&
+             data.id is string && data.organizationId is string &&
+             data.month is string && data.month.size() < 20 &&
+             data.revenue is number && data.profit is number &&
+             data.year is int;
+    }
+
+    function isValidInventoryItem(data) {
+      return hasRequiredFields(['id', 'organizationId', 'name', 'stock', 'status', 'updatedAt']) &&
+             hasOnlyAllowedFields(['id', 'organizationId', 'name', 'stock', 'status', 'updatedAt']) &&
+             data.id is string && data.organizationId is string &&
+             data.name is string && data.name.size() < 100 &&
+             data.stock is string && data.stock.size() < 100 &&
+             data.status in ['critical', 'warning', 'normal'] &&
+             (data.updatedAt is timestamp || data.updatedAt is string);
+    }
+
+    function isValidTemplate(data) {
+      return hasRequiredFields(['id', 'organizationId', 'title', 'category', 'usageCount']) &&
+             hasOnlyAllowedFields(['id', 'organizationId', 'title', 'description', 'category', 'usageCount', 'lastUsed', 'iconName', 'color']) &&
+              data.id is string && data.organizationId is string &&
+              data.title is string && data.title.size() < 100 &&
+              (!('description' in data) || (data.description is string && data.description.size() < 500)) &&
+              data.category in ['Proposal', 'Email', 'Financial', 'Contract', 'AI Prompt'] &&
+              data.usageCount is int &&
+              (!('lastUsed' in data) || data.lastUsed is string) &&
+              (!('iconName' in data) || data.iconName is string) &&
+              (!('color' in data) || data.color is string);
+    }
+
+    function isValidDataConnector(data) {
+      return hasRequiredFields(['id', 'organizationId', 'type', 'name', 'status']) &&
+             hasOnlyAllowedFields(['id', 'organizationId', 'type', 'name', 'status', 'lastSynced', 'config']) &&
+             data.id is string && data.organizationId is string &&
+             data.type in ['tally', 'sheets', 'excel', 'zoho', 'quickbooks', 'api'] &&
+             data.name is string && data.name.size() < 100 &&
+             data.status in ['connected', 'disconnected', 'error', 'syncing'] &&
+             (!('lastSynced' in data) || (data.lastSynced is timestamp || data.lastSynced is string)) &&
+             (!('config' in data) || data.config is map);
+    }
+
+    function isValidAgent(data) {
+      return hasRequiredFields(['id', 'organizationId', 'name', 'role', 'instructions', 'createdAt']) &&
+             hasOnlyAllowedFields(['id', 'organizationId', 'name', 'role', 'instructions', 'dataAccess', 'tools', 'status', 'createdAt']) &&
+             data.id is string && data.organizationId is string &&
+             data.name is string && data.name.size() < 100 &&
+             data.role in ['Sales Agent', 'Finance Analyst', 'Marketing AI', 'Custom'] &&
+             data.instructions is string && data.instructions.size() < 5000 &&
+             (!('dataAccess' in data) || (data.dataAccess is list && data.dataAccess.size() < 20)) &&
+             (!('tools' in data) || (data.tools is list && data.tools.size() < 20)) &&
+             (!('status' in data) || data.status in ['active', 'inactive']) &&
+             data.createdAt is timestamp;
+    }
+
+    function isValidAgentRun(data) {
+      return hasRequiredFields(['id', 'agentId', 'organizationId', 'input', 'output', 'status', 'createdAt']) &&
+             hasOnlyAllowedFields(['id', 'agentId', 'organizationId', 'input', 'output', 'status', 'createdAt']) &&
+             data.id is string && data.agentId is string && data.organizationId is string &&
+             data.input is string && data.input.size() < 5000 &&
+             data.output is string && data.output.size() < 10000 &&
+             data.status in ['running', 'completed', 'failed'] &&
+             data.createdAt is timestamp;
+    }
+
+    function isValidNeuralDashboard(data) {
+      return hasRequiredFields(['organizationId', 'prompt', 'sql', 'kpis', 'charts', 'insights', 'recommendations', 'createdAt']) &&
+             hasOnlyAllowedFields(['id', 'organizationId', 'userId', 'prompt', 'sql', 'kpis', 'charts', 'table', 'insights', 'recommendations', 'createdAt']) &&
+             data.organizationId is string && data.prompt is string &&
+             data.sql is string && data.kpis is list && data.charts is list &&
+             data.insights is list && data.recommendations is list &&
+             data.createdAt is timestamp;
+    }
+
+    // ===============================================================
+    // Match Rules
+    // ===============================================================
+
+    match /test/connection {
+      allow read: if true;
+    }
+
+    match /organizations/{orgId} {
+      allow read: if isAuthenticated() && (orgId == 'org_' + request.auth.uid || isOrgMember(orgId));
+      allow create: if isAuthenticated() && isValidOrganization(request.resource.data);
+      allow update: if isOrgAdmin(orgId) && isValidOrganization(request.resource.data);
+      allow delete: if false;
+
+      match /users/{userId} {
+        allow read: if isOrgMember(orgId);
+        allow create: if isAuthenticated() && isValidUser(request.resource.data) && (isOwner(userId) || isOrgAdmin(orgId));
+        allow update: if isAuthenticated() && isValidUser(request.resource.data) && (isOwner(userId) || isOrgAdmin(orgId));
+        allow delete: if isOrgAdmin(orgId) && userId != request.auth.uid;
+      }
+
+      match /business_profiles/{profileId} {
+        allow read: if isOrgMember(orgId);
+        allow create: if isOrgManager(orgId) && isValidBusinessProfile(request.resource.data);
+        allow update: if isOrgManager(orgId) && isValidBusinessProfile(request.resource.data);
+        allow delete: if isOrgAdmin(orgId);
+      }
+
+      match /projects/{projectId} {
+        allow read: if isOrgMember(orgId);
+        allow create: if isOrgManager(orgId) && isValidProject(request.resource.data);
+        allow update: if isOrgManager(orgId) && isValidProject(request.resource.data);
+        allow delete: if isOrgAdmin(orgId);
+      }
+
+      match /documents/{docId} {
+        allow read: if isOrgMember(orgId);
+        allow create: if isOrgMember(orgId) && isValidDocument(request.resource.data);
+        allow update: if isOrgMember(orgId) && isValidDocument(request.resource.data);
+        allow delete: if isOrgManager(orgId);
+      }
+
+      match /financial_data/{dataId} {
+        allow read: if isOrgMember(orgId);
+        allow create: if isOrgAdmin(orgId) && isValidFinancialData(request.resource.data);
+        allow update: if isOrgAdmin(orgId) && isValidFinancialData(request.resource.data);
+        allow delete: if isOrgAdmin(orgId);
+      }
+
+      match /inventory/{itemId} {
+        allow read: if isOrgMember(orgId);
+        allow create: if isOrgManager(orgId) && isValidInventoryItem(request.resource.data);
+        allow update: if isOrgManager(orgId) && isValidInventoryItem(request.resource.data);
+        allow delete: if isOrgAdmin(orgId);
+      }
+
+      match /templates/{templateId} {
+        allow read: if isOrgMember(orgId);
+        allow create: if isOrgManager(orgId) && isValidTemplate(request.resource.data);
+        allow update: if isOrgManager(orgId) && isValidTemplate(request.resource.data);
+        allow delete: if isOrgAdmin(orgId);
+      }
+
+      match /data_connectors/{connectorId} {
+        allow read: if isOrgMember(orgId);
+        allow create: if isOrgAdmin(orgId) && isValidDataConnector(request.resource.data);
+        allow update: if isOrgAdmin(orgId) && isValidDataConnector(request.resource.data);
+        allow delete: if isOrgAdmin(orgId);
+      }
+
+      match /agents/{agentId} {
+        allow read: if isOrgMember(orgId);
+        allow create: if isOrgManager(orgId) && isValidAgent(request.resource.data);
+        allow update: if isOrgManager(orgId) && isValidAgent(request.resource.data);
+        allow delete: if isOrgAdmin(orgId);
+      }
+
+      match /agent_runs/{runId} {
+        allow read: if isOrgMember(orgId);
+        allow create: if isOrgMember(orgId) && isValidAgentRun(request.resource.data);
+        allow update: if isOrgMember(orgId) && isValidAgentRun(request.resource.data);
+        allow delete: if isOrgAdmin(orgId);
+      }
+
+      match /neural_dashboards/{dashId} {
+        allow read: if isOrgMember(orgId);
+        allow create: if isOrgMember(orgId) && isValidNeuralDashboard(request.resource.data);
+        allow update: if isOrgMember(orgId) && isValidNeuralDashboard(request.resource.data);
+        allow delete: if isOrgManager(orgId);
+      }
+    }
+
+    // Default deny
+    match /{path=**} {
+      allow read, write: if false;
+    }
+  }
+}

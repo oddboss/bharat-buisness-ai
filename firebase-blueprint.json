@@ -1,0 +1,244 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "A user of the BharatMind Business OS.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "The unique ID of the user." },
+        "email": { "type": "string", "format": "email", "description": "The user's email address." },
+        "displayName": { "type": "string", "description": "The user's full name." },
+        "photoURL": { "type": "string", "format": "uri", "description": "The user's profile picture URL." },
+        "role": { "type": "string", "enum": ["admin", "manager", "viewer"], "description": "The user's role within the organization." },
+        "organizationId": { "type": "string", "description": "The ID of the organization the user belongs to." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "When the user account was created." }
+      },
+      "required": ["uid", "email", "displayName", "role", "organizationId", "createdAt"]
+    },
+    "Organization": {
+      "title": "Organization",
+      "description": "A business workspace or company.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "The unique ID of the organization." },
+        "name": { "type": "string", "description": "The name of the organization." },
+        "ownerId": { "type": "string", "description": "The UID of the organization owner." },
+        "plan": { "type": "string", "enum": ["free", "pro", "enterprise"], "description": "The subscription plan." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "When the organization was created." }
+      },
+      "required": ["id", "name", "ownerId", "plan", "createdAt"]
+    },
+    "BusinessProfile": {
+      "title": "Business Profile",
+      "description": "A specific business identity or brand context.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "The unique ID of the profile." },
+        "organizationId": { "type": "string", "description": "The ID of the organization." },
+        "name": { "type": "string", "description": "The name of the business." },
+        "industry": { "type": "string", "description": "The industry the business operates in." },
+        "location": { "type": "string", "description": "The primary location." },
+        "targetCustomers": { "type": "string", "description": "Description of target audience." },
+        "revenueModel": { "type": "string", "description": "How the business makes money." },
+        "description": { "type": "string", "description": "General description of the business." },
+        "isDefault": { "type": "boolean", "description": "Whether this is the default profile for the workspace." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "When the profile was created." }
+      },
+      "required": ["id", "organizationId", "name", "industry", "createdAt"]
+    },
+    "Project": {
+      "title": "Project",
+      "description": "A business initiative or task group.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "The unique ID of the project." },
+        "organizationId": { "type": "string", "description": "The ID of the organization." },
+        "title": { "type": "string", "description": "The project title." },
+        "client": { "type": "string", "description": "The client name, if applicable." },
+        "status": { "type": "string", "enum": ["Planning", "In Progress", "Review", "Completed"], "description": "The current status." },
+        "deadline": { "type": "string", "format": "date", "description": "Project deadline." },
+        "progress": { "type": "integer", "description": "Percentage completion." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "When the project was created." }
+      },
+      "required": ["id", "organizationId", "title", "status", "createdAt"]
+    },
+    "Document": {
+      "title": "Document",
+      "description": "A file uploaded to the workspace.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "The unique ID of the document." },
+        "organizationId": { "type": "string", "description": "The ID of the organization." },
+        "name": { "type": "string", "description": "The file name." },
+        "type": { "type": "string", "enum": ["pdf", "doc", "xls", "csv"], "description": "The file type." },
+        "size": { "type": "string", "description": "The file size." },
+        "url": { "type": "string", "format": "uri", "description": "The URL to the stored file." },
+        "status": { "type": "string", "enum": ["ready", "analyzing", "error"], "description": "AI analysis status." },
+        "insights": { "type": "array", "items": { "type": "string" }, "description": "AI-generated insights." },
+        "uploadedAt": { "type": "string", "format": "date-time", "description": "When the file was uploaded." }
+      },
+      "required": ["id", "organizationId", "name", "type", "url", "status", "uploadedAt"]
+    },
+    "FinancialData": {
+      "title": "Financial Data",
+      "description": "Monthly financial performance metrics.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "The unique ID (e.g., organizationId_YYYY_MM)." },
+        "organizationId": { "type": "string", "description": "The ID of the organization." },
+        "month": { "type": "string", "description": "The month (e.g., 'Jan')." },
+        "revenue": { "type": "number", "description": "Total revenue for the month." },
+        "profit": { "type": "number", "description": "Total profit for the month." },
+        "year": { "type": "integer", "description": "The year." }
+      },
+      "required": ["id", "organizationId", "month", "revenue", "profit", "year"]
+    },
+    "InventoryItem": {
+      "title": "Inventory Item",
+      "description": "An item in the business inventory.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "The unique ID of the item." },
+        "organizationId": { "type": "string", "description": "The ID of the organization." },
+        "name": { "type": "string", "description": "The name of the item." },
+        "stock": { "type": "string", "description": "Current stock level description." },
+        "status": { "type": "string", "enum": ["critical", "warning", "normal"], "description": "Alert status." },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "When the stock was last updated." }
+      },
+      "required": ["id", "organizationId", "name", "stock", "status", "updatedAt"]
+    },
+    "Template": {
+      "title": "Template",
+      "description": "A business asset template.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "The unique ID of the template." },
+        "organizationId": { "type": "string", "description": "The ID of the organization." },
+        "title": { "type": "string", "description": "The template title." },
+        "description": { "type": "string", "description": "Brief description of the template." },
+        "category": { "type": "string", "enum": ["Proposal", "Email", "Financial", "Contract", "AI Prompt"], "description": "The category." },
+        "usageCount": { "type": "integer", "description": "How many times it has been used." },
+        "lastUsed": { "type": "string", "description": "Relative time string of last use." },
+        "iconName": { "type": "string", "description": "Lucide icon name to use." },
+        "color": { "type": "string", "description": "Tailwind color classes." }
+      },
+      "required": ["id", "organizationId", "title", "category", "usageCount"]
+    },
+    "DataConnector": {
+      "title": "Data Connector",
+      "description": "An external data source connection.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "The unique ID of the connector." },
+        "organizationId": { "type": "string", "description": "The ID of the organization." },
+        "type": { "type": "string", "enum": ["tally", "sheets", "excel", "zoho", "quickbooks", "api"], "description": "The type of connector." },
+        "name": { "type": "string", "description": "Display name for the connector." },
+        "status": { "type": "string", "enum": ["connected", "disconnected", "error", "syncing"], "description": "Current connection status." },
+        "lastSynced": { "type": "string", "format": "date-time", "description": "When the data was last synced." },
+        "config": { "type": "object", "description": "Configuration parameters (encrypted or sensitive)." }
+      },
+      "required": ["id", "organizationId", "type", "name", "status"]
+    },
+    "Agent": {
+      "title": "AI Agent",
+      "description": "A configured AI agent for business tasks.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "The unique ID of the agent." },
+        "organizationId": { "type": "string", "description": "The ID of the organization." },
+        "name": { "type": "string", "description": "The name of the agent." },
+        "role": { "type": "string", "enum": ["Sales Agent", "Finance Analyst", "Marketing AI", "Custom"], "description": "The role of the agent." },
+        "instructions": { "type": "string", "description": "The system instructions for the agent." },
+        "dataAccess": { "type": "array", "items": { "type": "string" }, "description": "List of data sources the agent can access." },
+        "tools": { "type": "array", "items": { "type": "string" }, "description": "List of tools the agent can use." },
+        "status": { "type": "string", "enum": ["active", "inactive"], "description": "Current status." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "When the agent was created." }
+      },
+      "required": ["id", "organizationId", "name", "role", "instructions", "createdAt"]
+    },
+    "AgentRun": {
+      "title": "Agent Run",
+      "description": "An execution instance of an AI agent.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "The unique ID of the run." },
+        "agentId": { "type": "string", "description": "The ID of the agent." },
+        "organizationId": { "type": "string", "description": "The ID of the organization." },
+        "input": { "type": "string", "description": "The user query or input." },
+        "output": { "type": "string", "description": "The agent's response." },
+        "status": { "type": "string", "enum": ["running", "completed", "failed"], "description": "The status of the run." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "When the run started." }
+      },
+      "required": ["id", "agentId", "organizationId", "input", "output", "status", "createdAt"]
+    },
+    "NeuralDashboard": {
+      "title": "Neural Dashboard",
+      "description": "An AI-generated business intelligence dashboard.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "The unique ID of the dashboard." },
+        "organizationId": { "type": "string", "description": "The ID of the organization." },
+        "userId": { "type": "string", "description": "The ID of the user who generated it." },
+        "prompt": { "type": "string", "description": "The natural language prompt used." },
+        "sql": { "type": "string", "description": "The SQL query generated." },
+        "kpis": { "type": "array", "items": { "type": "object" }, "description": "Key Performance Indicators." },
+        "charts": { "type": "array", "items": { "type": "object" }, "description": "Chart configurations and data." },
+        "table": { "type": "array", "items": { "type": "object" }, "description": "Tabular data extract." },
+        "insights": { "type": "array", "items": { "type": "string" }, "description": "AI-generated insights." },
+        "recommendations": { "type": "array", "items": { "type": "string" }, "description": "AI-generated recommendations." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "When the dashboard was generated." }
+      },
+      "required": ["organizationId", "prompt", "sql", "kpis", "charts", "insights", "recommendations", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/organizations/{orgId}": {
+      "schema": "Organization",
+      "description": "Root collection for organizations."
+    },
+    "/organizations/{orgId}/users/{userId}": {
+      "schema": "User",
+      "description": "Users within an organization."
+    },
+    "/organizations/{orgId}/business_profiles/{profileId}": {
+      "schema": "BusinessProfile",
+      "description": "Business profiles for an organization."
+    },
+    "/organizations/{orgId}/projects/{projectId}": {
+      "schema": "Project",
+      "description": "Projects for an organization."
+    },
+    "/organizations/{orgId}/documents/{docId}": {
+      "schema": "Document",
+      "description": "Documents for an organization."
+    },
+    "/organizations/{orgId}/financial_data/{dataId}": {
+      "schema": "FinancialData",
+      "description": "Financial records for analytics."
+    },
+    "/organizations/{orgId}/inventory/{itemId}": {
+      "schema": "InventoryItem",
+      "description": "Inventory items and alerts."
+    },
+    "/organizations/{orgId}/templates/{templateId}": {
+      "schema": "Template",
+      "description": "Custom templates for the organization."
+    },
+    "/organizations/{orgId}/data_connectors/{connectorId}": {
+      "schema": "DataConnector",
+      "description": "External data connectors for the organization."
+    },
+    "/organizations/{orgId}/agents/{agentId}": {
+      "schema": "Agent",
+      "description": "AI agents for the organization."
+    },
+    "/organizations/{orgId}/agent_runs/{runId}": {
+      "schema": "AgentRun",
+      "description": "Execution history of AI agents."
+    },
+    "/organizations/{orgId}/neural_dashboards/{dashId}": {
+      "schema": "NeuralDashboard",
+      "description": "AI-generated dashboards for the organization."
+    }
+  }
+}

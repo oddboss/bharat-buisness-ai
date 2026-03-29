@@ -1,0 +1,24 @@
+[
+  {
+    "id": "c1",
+    "customer_name": "Rahul Sharma",
+    "email": "rahul.sharma@example.com",
+    "phone": "+91 9876543210",
+    "total_orders": 12,
+    "total_spent": 45000,
+    "outstanding_balance": 15000,
+    "last_purchase": "2026-03-05T11:20:00Z",
+    "status": "Active"
+  },
+  {
+    "id": "c2",
+    "customer_name": "Anita Desai",
+    "email": "anita.desai@example.com",
+    "phone": "+91 8765432109",
+    "total_orders": 5,
+    "total_spent": 12500,
+    "outstanding_balance": 0,
+    "last_purchase": "2026-02-28T09:15:00Z",
+    "status": "Lead"
+  }
+]
